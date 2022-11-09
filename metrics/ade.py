@@ -32,7 +32,9 @@ class ADE(Metric):
     def update(self,
                pred: torch.Tensor,
                target: torch.Tensor) -> None:
-        self.sum += torch.norm(pred - target, p=2, dim=-1).mean(dim=-1).sum()
+        incre = torch.norm(pred - target, p=2, dim=-1).mean(dim=-1).sum()
+        self.sum += incre
+        # self.sum += torch.norm(pred - target, p=2, dim=-1).mean(dim=-1).sum()
         self.count += pred.size(0)
 
     def compute(self) -> torch.Tensor:

@@ -16,8 +16,12 @@ from argparse import ArgumentParser
 import pytorch_lightning as pl
 from torch_geometric.data import DataLoader
 
-from datasets import ArgoverseV1Dataset
+# from datasets import ArgoverseV1Dataset
+from datasets import WaymoDataset
 from models.hivt import HiVT
+
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"]="1,2,3,4,5,6,7"
 
 if __name__ == '__main__':
     pl.seed_everything(2022)
@@ -34,7 +38,7 @@ if __name__ == '__main__':
 
     trainer = pl.Trainer.from_argparse_args(args)
     model = HiVT.load_from_checkpoint(checkpoint_path=args.ckpt_path, parallel=True)
-    val_dataset = ArgoverseV1Dataset(root=args.root, split='val', local_radius=model.hparams.local_radius)
+    val_dataset = WaymoDataset(root=args.root, split='validation', local_radius=model.hparams.local_radius)
     dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                             pin_memory=args.pin_memory, persistent_workers=args.persistent_workers)
     trainer.validate(model, dataloader)

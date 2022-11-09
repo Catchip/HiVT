@@ -89,9 +89,12 @@ class HiVT(pl.LightningModule):
 
     def forward(self, data: TemporalData):
         if self.rotate:
+            av_index = data['av_index']
+            rotate_angles = data['rotate_angles']
+            # print(rotate_angles.size())
             rotate_mat = torch.empty(data.num_nodes, 2, 2, device=self.device)
-            sin_vals = torch.sin(data['rotate_angles'])
-            cos_vals = torch.cos(data['rotate_angles'])
+            sin_vals = torch.sin(rotate_angles)
+            cos_vals = torch.cos(rotate_angles)
             rotate_mat[:, 0, 0] = cos_vals
             rotate_mat[:, 0, 1] = -sin_vals
             rotate_mat[:, 1, 0] = sin_vals
@@ -131,11 +134,19 @@ class HiVT(pl.LightningModule):
         reg_loss = self.reg_loss(y_hat_best[reg_mask], data.y[reg_mask])
         self.log('val_reg_loss', reg_loss, prog_bar=True, on_step=False, on_epoch=True, batch_size=1)
 
-        y_hat_agent = y_hat[:, data['agent_index'], :, : 2]
-        y_agent = data.y[data['agent_index']]
+        # y_hat_agent = y_hat[:, data['agent_index'], :, : 2]
+        # y_agent = data.y[data['agent_index']]
+        # print(data['agent_index'])
+        agent_index = [0] * len(data['agent_index'])
+        y_hat_agent = y_hat[:, agent_index, :, : 2]
+        y_agent = data.y[agent_index]
         fde_agent = torch.norm(y_hat_agent[:, :, -1] - y_agent[:, -1], p=2, dim=-1)
         best_mode_agent = fde_agent.argmin(dim=0)
         y_hat_best_agent = y_hat_agent[best_mode_agent, torch.arange(data.num_graphs)]
+        # print("y_hat_best_agent")
+        # print(y_hat_best_agent)
+        # print("y_agent")
+        # print(y_agent)
         self.minADE.update(y_hat_best_agent, y_agent)
         self.minFDE.update(y_hat_best_agent, y_agent)
         self.minMR.update(y_hat_best_agent, y_agent)
@@ -180,8 +191,8 @@ class HiVT(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = parent_parser.add_argument_group('HiVT')
-        parser.add_argument('--historical_steps', type=int, default=20)
-        parser.add_argument('--future_steps', type=int, default=30)
+        parser.add_argument('--historical_steps', type=int, default=11)
+        parser.add_argument('--future_steps', type=int, default=80)
         parser.add_argument('--num_modes', type=int, default=6)
         parser.add_argument('--rotate', type=bool, default=True)
         parser.add_argument('--node_dim', type=int, default=2)
@@ -194,6 +205,7 @@ class HiVT(pl.LightningModule):
         parser.add_argument('--local_radius', type=float, default=50)
         parser.add_argument('--parallel', type=bool, default=False)
         parser.add_argument('--lr', type=float, default=5e-4)
+        # parser.add_argument('--lr', type=float, default=0.1)
         parser.add_argument('--weight_decay', type=float, default=1e-4)
         parser.add_argument('--T_max', type=int, default=64)
         return parent_parser

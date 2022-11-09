@@ -12,3 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from datasets.argoverse_v1_dataset import ArgoverseV1Dataset
+# from datasets.waymo_tutorial import waymo_tutorial
+from datasets.waymo_dataset import WaymoDataset
