@@ -51,8 +51,8 @@ class WaymoDataset(Dataset):
         if split == 'sample':
             self._directory = 'forecasting_sample'
         elif split == 'train':
-            # self._directory = 'training'
-            self._directory = 'validation'
+            self._directory = 'training'
+            # self._directory = 'validation'
         elif split == 'validation':
             self._directory = 'validation'
         elif split == 'test':
@@ -192,7 +192,7 @@ class WaymoDataset(Dataset):
 
         self.root = root
         self._raw_file_names = os.listdir(self.raw_dir)
-        # self._processed_file_names = [os.path.splitext(f)[0] + '.pt' for f in self.raw_file_names]
+        self._processed_file_names = [os.path.splitext(f)[0] + '.pt' for f in self.raw_file_names]
         self._processed_file_names = os.listdir(self.processed_dir)
         self._processed_paths = [os.path.join(self.processed_dir, f) for f in self._processed_file_names]
 
@@ -201,16 +201,16 @@ class WaymoDataset(Dataset):
     @property
     def raw_dir(self) -> str:
         if self._split == "train":
-            return os.path.join(self.root, self._directory,)
-            # return os.path.join(self.root, self._directory, 'split_0' )
+            # return os.path.join(self.root, self._directory,)
+            return os.path.join(self.root, self._directory, 'split_0' )
         elif self._split == "validation":
             return os.path.join(self.root, self._directory,)
 
     @property
     def processed_dir(self) -> str:
         if self._split == "train":
-            # return os.path.join(self.root, self._directory, 'split_0_processed')
-            return os.path.join(self.root, self._directory, 'processed')
+            return os.path.join(self.root, self._directory, 'split_0_processed')
+            # return os.path.join(self.root, self._directory, 'processed')
         elif self._split == "validation":
             return os.path.join(self.root, self._directory, 'processed')
 
@@ -228,7 +228,6 @@ class WaymoDataset(Dataset):
 
     def process(self) -> None:
         # am = ArgoverseMap()
-        return
         if self._split=='train':
             return
         for raw_path in tqdm(self.raw_paths):
@@ -419,7 +418,6 @@ class WaymoDataset(Dataset):
 
 
         numbytype = [0] * 20
-        pre_id = -1
         for i in range(roadgraph_samples_num):
             # only centerline count
             sample_id = roadgraph_samples_id[i][0]
@@ -428,12 +426,9 @@ class WaymoDataset(Dataset):
             if sample_id in lane_polylines:
                 xy = roadgraph_samples_xy[i]
                 lane_polylines[sample_id].append(roadgraph_samples_xy[i])
-                lane_dir_pairs[sample_id][1] = roadgraph_samples_dir[i]
-                pre_id = sample_id
             else:
                 xy = roadgraph_samples_xy[i]
                 lane_polylines[sample_id] = [roadgraph_samples_xy[i]]
-                lane_dir_pairs[sample_id] = [roadgraph_samples_dir[i], roadgraph_samples_dir[i]]
 
         if len(lane_polylines) == 0:
             return {"wrong_data": True}
@@ -449,25 +444,30 @@ class WaymoDataset(Dataset):
             lane_vectors.append(lane_polyline[1:] - lane_polyline[:-1])
             lane_positions.append(lane_polyline[:-1])
             count = len(lane_polyline) - 1
-            traffic_control = True
 
-            dir1 = lane_dir_pairs[lane_id][0]
-            dir2 = lane_dir_pairs[lane_id][1]
-
-            dot_product = np.dot(dir1, dir2)
-            turn_angle = np.arccos(dot_product)
-            c = np.cross(dir1,dir2)
-            if c[2]>0:
-                turn_angle += Pi
-
-            turn_direction = 1 if turn_angle > Pi else 2
-            if turn_angle > Pi/3 and turn_angle < Pi*5/3:
-                is_intersection = True
-            else:
-                is_intersection = False
+            if len(lane_polyline) < 2:
                 turn_direction = 0
-            # print(is_intersection)
+                is_intersection = False
+                traffic_control = False
+            else:
+                dir1 = (lane_polyline[1] - lane_polyline[0]).numpy()
+                dir2 = (lane_polyline[-1] - lane_polyline[-2]).numpy()
+                theNorm = np.linalg.norm(dir1) * np.linalg.norm(dir2)
+                rho = np.rad2deg(np.arcsin(np.cross(dir1, dir2)/ theNorm ))
+                theta = np.rad2deg(np.arccos(np.dot(dir1, dir2)/ theNorm))
 
+                theta = theta if rho > 0 else -theta
+
+                if theta > 60 and theta < 180:
+                    turn_direction = 1
+                elif theta < -60 and theta > -180:
+                    turn_direction = 2
+                else:
+                    turn_direction = 0
+
+                is_intersection = True if abs(theta) > 60 else False
+
+                traffic_control = is_intersection
 
             turn_directions.append(turn_direction * torch.ones(count, dtype=torch.uint8))
             traffic_controls.append(traffic_control * torch.ones(count, dtype=torch.uint8))
