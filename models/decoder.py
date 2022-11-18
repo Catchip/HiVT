@@ -131,7 +131,11 @@ class MLPDecoder(nn.Module):
                 global_embed: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         pi = self.pi(torch.cat((local_embed.expand(self.num_modes, *local_embed.shape),
                                 global_embed), dim=-1)).squeeze(-1).t()
+        # print("print")
+        # print(global_embed.shape)
+        # print(local_embed.shape)
         out = self.aggr_embed(torch.cat((global_embed, local_embed.expand(self.num_modes, *local_embed.shape)), dim=-1))
+        # print(out.shape)
         loc = self.loc(out).view(self.num_modes, -1, self.future_steps, 2)  # [F, N, H, 2]
         if self.uncertain:
             scale = F.elu_(self.scale(out), alpha=1.0).view(self.num_modes, -1, self.future_steps, 2) + 1.0

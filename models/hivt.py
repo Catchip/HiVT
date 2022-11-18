@@ -108,6 +108,7 @@ class HiVT(pl.LightningModule):
         local_embed = self.local_encoder(data=data)
         global_embed = self.global_interactor(data=data, local_embed=local_embed)
         y_hat, pi = self.decoder(local_embed=local_embed, global_embed=global_embed)
+        print(y_hat.shape)
         return y_hat, pi
 
     def training_step(self, data, batch_idx):
@@ -136,7 +137,6 @@ class HiVT(pl.LightningModule):
 
         # y_hat_agent = y_hat[:, data['agent_index'], :, : 2]
         # y_agent = data.y[data['agent_index']]
-        # print(data['agent_index'])
         agent_index = [0] * len(data['agent_index'])
         y_hat_agent = y_hat[:, agent_index, :, : 2]
         y_agent = data.y[agent_index]
@@ -144,9 +144,11 @@ class HiVT(pl.LightningModule):
         best_mode_agent = fde_agent.argmin(dim=0)
         y_hat_best_agent = y_hat_agent[best_mode_agent, torch.arange(data.num_graphs)]
         # print("y_hat_best_agent")
-        # print(y_hat_best_agent)
+        # print(y_hat_best_agent.shape)
         # print("y_agent")
-        # print(y_agent)
+        # print(y_agent.shape)
+        # np.save("tmp", y_hat_best_agent)
+        # np.save("tmp", y_agent)
         self.minADE.update(y_hat_best_agent, y_agent)
         self.minFDE.update(y_hat_best_agent, y_agent)
         self.minMR.update(y_hat_best_agent, y_agent)

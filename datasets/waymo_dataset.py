@@ -19,7 +19,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
-from argoverse.map_representation.map_api import ArgoverseMap
+# from argoverse.map_representation.map_api import ArgoverseMap
 from torch_geometric.data import Data
 from torch_geometric.data import Dataset
 from tqdm import tqdm
@@ -52,7 +52,7 @@ class WaymoDataset(Dataset):
             self._directory = 'forecasting_sample'
         elif split == 'train':
             self._directory = 'training'
-            # self._directory = 'validation'
+            #self._directory = 'validation'
         elif split == 'validation':
             self._directory = 'validation'
         elif split == 'test':
@@ -191,8 +191,8 @@ class WaymoDataset(Dataset):
         self.features_description['state/objects_of_interest'] = tf.io.FixedLenFeature([128], tf.int64, default_value=None)
 
         self.root = root
-        self._raw_file_names = os.listdir(self.raw_dir)
-        self._processed_file_names = [os.path.splitext(f)[0] + '.pt' for f in self.raw_file_names]
+        # self._raw_file_names = os.listdir(self.raw_dir)
+        # self._processed_file_names = [os.path.splitext(f)[0] + '.pt' for f in self.raw_file_names]
         self._processed_file_names = os.listdir(self.processed_dir)
         self._processed_paths = [os.path.join(self.processed_dir, f) for f in self._processed_file_names]
 
@@ -228,14 +228,13 @@ class WaymoDataset(Dataset):
 
     def process(self) -> None:
         # am = ArgoverseMap()
-        if self._split=='train':
-            return
         for raw_path in tqdm(self.raw_paths):
             self.process_waymo(self._split, raw_path, self._local_radius)
             # data = TemporalData(**kwargs)
             # torch.save(data, os.path.join(self.processed_dir, str(kwargs['seq_id']) + '.pt'))
 
     def len(self) -> int:
+        # return len(self._raw_file_names)
         l = len(self._processed_file_names)
         return l
 
@@ -375,7 +374,7 @@ class WaymoDataset(Dataset):
             for timestamp in range(duration):
                 xy = x[node_index, timestamp]
                 x[node_index, timestamp] = torch.matmul(xy - origin, rotate_mat)
-            rotate_angles[node_index] = rotate_angles[node_index] + av_heading_theta
+            rotate_angles[node_index] = rotate_angles[node_index] - av_heading_theta
 
             duration = len(y[node_index])
             for timestamp in range(duration):
@@ -494,11 +493,11 @@ class WaymoDataset(Dataset):
         lane_actor_vectors = \
             lane_positions.repeat_interleave(len(actor_current_inds), dim=0) - actor_current_position.repeat(lane_vectors.size(0), 1)
 
-        radius = 50
+        radius = 150
         mask = torch.norm(lane_actor_vectors, p=2, dim=-1) < radius
         lane_actor_index = lane_actor_index[:, mask]
         lane_actor_vectors = lane_actor_vectors[mask]
-        print(seq_id)
+        # print(seq_id)
 
         return {
             'x': x,  # [N, 20, 2]

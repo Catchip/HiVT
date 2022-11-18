@@ -18,7 +18,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
-from argoverse.map_representation.map_api import ArgoverseMap
+# from argoverse.map_representation.map_api import ArgoverseMap
 from torch_geometric.data import Data
 from torch_geometric.data import Dataset
 from tqdm import tqdm
